@@ -7,14 +7,23 @@
         mc:Ignorable="d"
         Title="MainWindow" Height="800" Width="1150">
     <Grid>
-        <StackPanel Margin="20">
-            <TextBlock Text="Service Name:"/>
-            <TextBox x:Name="serviceNameTextBox"/>
-            <TextBlock Text="Login:"/>
-            <TextBox x:Name="loginTextBox"/>
-            <TextBlock Text="Password Hash:"/>
-            <TextBox x:Name="passwordHashTextBox"/>
-            <Button Content="Add Service" Click="AddServiceButton_Click"/>
+        <StackPanel Margin="20,20,575,600">
+            <TextBlock Text="Service:" FontSize="15"/>
+            <ComboBox x:Name="serviceNameComboBox" ItemsSource="{Binding Services}" DisplayMemberPath="ServiceName"/>
+            <TextBlock Text="Login:" FontSize="15"/>
+            <TextBox x:Name="loginTextBox" FontSize="15"/>
+            <TextBlock Text="Password Hash:" FontSize="15"/>
+            <TextBox x:Name="passwordHashTextBox" FontSize="15"/>
+            <Button Content="Add Account" Click="AddAccountButton_Click" FontSize="15" Margin="0 10 0 0"/>
+        </StackPanel>
+        <StackPanel Margin="600,20,20,600">
+            <TextBlock Text="Service Name:" FontSize="15"/>
+            <TextBox x:Name="serviceNameTextBox" FontSize="15"/>
+            <Button Content="Add Service" Click="AddServiceButton_Click" FontSize="15" Margin="0 20 0 0"/>
+        </StackPanel>
+        <StackPanel Margin="20,339,580,397">
+            <Label Content="Search"/>
+            <TextBox TextChanged="SearchBox_TextChanged"/>
         </StackPanel>
         <ListView Name="serviceListView" Margin="0,393,0,0">
             <ListView.View>

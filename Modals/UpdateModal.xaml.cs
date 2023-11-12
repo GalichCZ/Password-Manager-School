@@ -6,7 +6,7 @@ namespace password_manager.Modals
 {
     public partial class UpdateModal : Window
     {
-        private static readonly ServiceRepository serviceRepository = new ServiceRepository();
+        private static readonly AccountRepository serviceRepository = new AccountRepository();
 
         public UpdateModal()
         {
@@ -15,18 +15,16 @@ namespace password_manager.Modals
 
         private void UpdateButton_Click(object sender, RoutedEventArgs e)
         {
-            Service selectedService = (Service)DataContext;
+            Account selectedAccount = (Account)DataContext;
 
-            if (selectedService != null)
+            if (selectedAccount != null)
             {
-                long id = selectedService.Id;
-                string serviceName = serviceNameTextBox.Text;
+                long id = selectedAccount.Id;
+                Service service = (Service)serviceNameComboBox.SelectedItem;
                 string login = loginTextBox.Text;
                 string password = passwordTextBox.Text;
 
-                Service updatedService = new Service(id, serviceName, login, password);
-
-                serviceRepository.UpdateService(updatedService);
+                serviceRepository.UpdateService(login, password, service.Id, id);
 
                 MessageBox.Show("Service updated successfully!");
                 this.Close();

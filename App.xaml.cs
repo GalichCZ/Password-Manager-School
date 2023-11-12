@@ -1,9 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Data;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using password_manager.Repositrories;
+using System;
+using System.IO;
+using System.Security.Cryptography;
+using System.Text;
 using System.Windows;
 
 namespace password_manager
@@ -13,6 +12,13 @@ namespace password_manager
     /// </summary>
     public partial class App : Application
     {
+        SQLiteHelper dbHelper = new SQLiteHelper();
 
+        protected override void OnStartup(StartupEventArgs e)
+        {
+            base.OnStartup(e);
+
+            dbHelper.CreateTables();
+        }
     }
 }

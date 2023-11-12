@@ -9,7 +9,7 @@
     <Grid>
         <StackPanel Margin="20">
             <TextBlock Text="Service Name:"/>
-            <TextBox x:Name="serviceNameTextBox" Text="{Binding ServiceName}"/>
+            <ComboBox x:Name="serviceNameComboBox" ItemsSource="{Binding Services}" DisplayMemberPath="ServiceName"/>
             <TextBlock Text="Login:"/>
             <TextBox x:Name="loginTextBox" Text="{Binding Login}"/>
             <TextBlock Text="Password:"/>

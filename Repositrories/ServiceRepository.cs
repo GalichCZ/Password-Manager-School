@@ -2,14 +2,17 @@
 using System;
 using System.Collections.Generic;
 using System.Data.SQLite;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace password_manager.Repositrories
 {
-    public class ServiceRepository
+    class ServiceRepository
     {
         SQLiteHelper dbHelper = new SQLiteHelper();
-
-        public void CreateTables()
+        
+        public void AddService(string serviceName)
         {
             using (SQLiteConnection connection = dbHelper.CreateConnection())
             {
@@ -18,13 +21,7 @@ namespace password_manager.Repositrories
                 using (SQLiteCommand command = new SQLiteCommand())
                 {
                     command.Connection = connection;
-                    command.CommandText = @"CREATE TABLE IF NOT EXISTS service (
-                                            id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                            service_name TEXT NOT NULL,
-                                            login TEXT NOT NULL,
-                                            password_hash BLOB NOT NULL
-                                            );";
-
+                    command.CommandText = $"INSERT INTO service (service_name) VALUES ('{serviceName}');";
                     command.ExecuteNonQuery();
                 }
 
@@ -32,8 +29,9 @@ namespace password_manager.Repositrories
             }
         }
 
-        public void AddService(Service service)
+        public bool CheckServiceExists(string serviceName)
         {
+            bool exists = false;
 
             using (SQLiteConnection connection = dbHelper.CreateConnection())
             {
@@ -42,37 +40,45 @@ namespace password_manager.Repositrories
                 using (SQLiteCommand command = new SQLiteCommand())
                 {
                     command.Connection = connection;
-                    command.CommandText = "INSERT INTO service(service_name, login, password_hash) VALUES(@service_name, @login, @password_hash)";
-                    command.Parameters.AddWithValue("@service_name", service.ServiceName);
-                    command.Parameters.AddWithValue("@login", service.Login);
-                    command.Parameters.AddWithValue("@password_hash", service.GetPasswordHash());
+                    command.CommandText = $"SELECT COUNT(*) FROM service WHERE service_name = '{serviceName}';";
 
-                    command.ExecuteNonQuery();
+                    using (SQLiteDataReader reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            exists = reader.GetInt32(0) > 0;
+                        }
+                    }
                 }
 
                 connection.Close();
             }
+
+            return exists;
         }
 
-        public List<Service> GetAllServices()
+        public List<Service> GetServices()
         {
             List<Service> services = new List<Service>();
 
             using (SQLiteConnection connection = dbHelper.CreateConnection())
             {
                 connection.Open();
-                using (SQLiteCommand command = new SQLiteCommand("SELECT * FROM service", connection))
-                using (SQLiteDataReader reader = command.ExecuteReader())
+
+                using (SQLiteCommand command = new SQLiteCommand())
                 {
-                    while (reader.Read())
+                    command.Connection = connection;
+                    command.CommandText = "SELECT * FROM service";
+
+                    using (SQLiteDataReader reader = command.ExecuteReader())
                     {
-                        long id = Convert.ToInt64(reader["id"]);
-                        string serviceName = (string)reader["service_name"];
-                        string login = (string)reader["login"];
-                        byte[] passHash = (byte[])reader["password_hash"];
-                        services.Add(new Service(id, serviceName, login, passHash));
+                        while (reader.Read())
+                        {
+                            services.Add(new Service(reader.GetInt64(0), reader.GetString(1)));
+                        }
                     }
                 }
+
                 connection.Close();
             }
 
@@ -88,12 +94,7 @@ namespace password_manager.Repositrories
                 using (SQLiteCommand command = new SQLiteCommand())
                 {
                     command.Connection = connection;
-                    command.CommandText = "UPDATE service SET service_name = @service_name, login = @login, password_hash = @password_hash WHERE id = @id";
-                    command.Parameters.AddWithValue("@id", service.Id);
-                    command.Parameters.AddWithValue("@service_name", service.ServiceName);
-                    command.Parameters.AddWithValue("@login", service.Login);
-                    command.Parameters.AddWithValue("@password_hash", service.GetPasswordHash());
-
+                    command.CommandText = $"UPDATE service SET service_name = '{service.ServiceName}' WHERE id = {service.Id};";
                     command.ExecuteNonQuery();
                 }
 
