@@ -3,8 +3,10 @@ using password_manager.Modals;
 using password_manager.Repositrories;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 
 namespace password_manager
@@ -18,18 +20,74 @@ namespace password_manager
         private static readonly string key = "b14ca5898a4e4133bbce2ea2315a1916";
         private static readonly AccountRepository accountRepository = new AccountRepository();
         private static readonly ServiceRepository serviceRepository = new ServiceRepository();
-        private static readonly SQLiteHelper dbHelper = new SQLiteHelper();
         private System.Windows.Threading.DispatcherTimer timer;
 
         public MainWindow()
         {
             timer = new System.Windows.Threading.DispatcherTimer();
-            timer.Interval = TimeSpan.FromMilliseconds(500);
+            timer.Interval = TimeSpan.FromMilliseconds(100);
             timer.Tick += Timer_Tick;
 
             InitializeComponent();
             LoadAccounts();
             LoadServices();
+        }
+
+        GridViewColumnHeader _lastHeaderClicked = null;
+        ListSortDirection _lastDirection = ListSortDirection.Ascending;
+
+        void GridViewColumnHeaderClickedHandler(object sender,
+                                           RoutedEventArgs e)
+        {
+            var headerClicked = e.OriginalSource as GridViewColumnHeader;
+            ListSortDirection direction;
+
+            if (headerClicked != null)
+            {
+                if (headerClicked.Role != GridViewColumnHeaderRole.Padding)
+                {
+                    if (headerClicked != _lastHeaderClicked)
+                    {
+                        direction = ListSortDirection.Ascending;
+                    }
+                    else
+                    {
+                        if (_lastDirection == ListSortDirection.Ascending)
+                        {
+                            direction = ListSortDirection.Descending;
+                        }
+                        else
+                        {
+                            direction = ListSortDirection.Ascending;
+                        }
+                    }
+
+                    var columnBinding = headerClicked.Column.DisplayMemberBinding as Binding;
+                    var sortBy = columnBinding?.Path.Path ?? headerClicked.Column.Header as string;
+
+                    Sort(sortBy, direction);
+
+                    if (direction == ListSortDirection.Ascending)
+                    {
+                        headerClicked.Column.HeaderTemplate =
+                          Resources["HeaderTemplateArrowUp"] as DataTemplate;
+                    }
+                    else
+                    {
+                        headerClicked.Column.HeaderTemplate =
+                          Resources["HeaderTemplateArrowDown"] as DataTemplate;
+                    }
+
+                    // Remove arrow from previously sorted header
+                    if (_lastHeaderClicked != null && _lastHeaderClicked != headerClicked)
+                    {
+                        _lastHeaderClicked.Column.HeaderTemplate = null;
+                    }
+
+                    _lastHeaderClicked = headerClicked;
+                    _lastDirection = direction;
+                }
+            }
         }
 
         private void AddAccountButton_Click(object sender, RoutedEventArgs e)
@@ -44,7 +102,6 @@ namespace password_manager
             MessageBox.Show(Utils.CheckPasswordDifficult(password));
             MessageBox.Show("Service added successfully!");
             LoadAccounts();
-            dbHelper.UpdateVirtualTableData();
         }
 
         private void AddServiceButton_Click(object sender, RoutedEventArgs e)
@@ -103,7 +160,7 @@ namespace password_manager
             }
         }
 
-        private void TextBox_TextChanged(object sender, TextChangedEventArgs e)
+        private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             // Restart the timer on each text change
             timer.Stop();
@@ -113,10 +170,33 @@ namespace password_manager
         private void Timer_Tick(object sender, EventArgs e)
         {
             timer.Stop();
+            string searchTerm = searchTextBox.Text;
+            TriggerAction(searchTerm);
         }
 
-        private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
+        private void TriggerAction(string searchTerm)
         {
+            if(searchTerm.Length > 0)
+            {
+                List<Account> services = accountRepository.SearchThrough(searchTerm);
+
+                serviceListView.ItemsSource = services;
+            }
+            else
+            {
+                LoadAccounts();
+            }
+        }
+
+        private void Sort(string sortBy, ListSortDirection direction)
+        {
+            ICollectionView dataView =
+              CollectionViewSource.GetDefaultView(serviceListView.ItemsSource);
+
+            dataView.SortDescriptions.Clear();
+            SortDescription sd = new SortDescription(sortBy, direction);
+            dataView.SortDescriptions.Add(sd);
+            dataView.Refresh();
         }
     }
 }

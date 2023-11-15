@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data.SQLite;
+using System.Windows;
 
 namespace password_manager.Repositrories
 {
@@ -35,7 +36,7 @@ namespace password_manager.Repositrories
         public List<Account> GetAllServices()
         {
 
-            List<Account> services = new List<Account>();
+            List<Account> account = new List<Account>();
 
             using (SQLiteConnection connection = dbHelper.CreateConnection())
             {
@@ -50,13 +51,13 @@ namespace password_manager.Repositrories
                         string serviceName = (string)reader["service_name"];
                         string login = (string)reader["login"];
                         byte[] passHash = (byte[])reader["password_hash"];
-                        services.Add(new Account(id, serviceName, login, passHash));
+                        account.Add(new Account(id, serviceName, login, passHash));
                     }
                 }
                 connection.Close();
             }
 
-            return services;
+            return account;
         }
 
         public void UpdateService(string login, string password, long serviceId, long accountId)
@@ -64,8 +65,6 @@ namespace password_manager.Repositrories
             using (SQLiteConnection connection = dbHelper.CreateConnection())
             {
                 connection.Open();
-
-                //rewrite it using adding id of service
 
                 using (SQLiteCommand command = new SQLiteCommand())
                 {
@@ -81,6 +80,50 @@ namespace password_manager.Repositrories
 
                 connection.Close();
             }
+        }
+
+        public List<Account> SearchThrough(string searchTerm)
+        {
+            List<Account> services = new List<Account>();
+
+            using (SQLiteConnection connection = dbHelper.CreateConnection())
+            {
+                connection.Open();
+
+                string query = "SELECT account.*, service.service_name " +
+                           "FROM service " +
+                           "INNER JOIN account ON service.id = account.service_id " +
+                           "WHERE service.service_name LIKE '%' || @searchTerm || '%' OR account.login LIKE '%' || @searchTerm || '%'";
+
+                using (SQLiteCommand command = new SQLiteCommand(query, connection)) 
+                { 
+                    command.Parameters.AddWithValue("@searchTerm", searchTerm);
+
+                    using (SQLiteDataReader reader = command.ExecuteReader())
+                    {
+                        if (reader.HasRows)
+                        {
+                            while (reader.Read())
+                            {
+                                long id = Convert.ToInt64(reader["id"]);
+                                string serviceName = (string)reader["service_name"];
+                                string login = (string)reader["login"];
+                                byte[] passHash = (byte[])reader["password_hash"];
+                                Account account = new Account(id, serviceName, login, passHash);
+                                services.Add(account);
+                            }
+                        }
+                        else
+                        {
+                            MessageBox.Show("No matching records found.");
+                        }
+                    }
+                }
+
+                connection.Close();
+            }
+
+            return services;
         }
     }
 }

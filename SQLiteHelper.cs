@@ -42,30 +42,7 @@ namespace password_manager
                                         password_hash BLOB NOT NULL,
                                         service_id INTEGER NOT NULL,
                                         FOREIGN KEY (service_id) REFERENCES service(id)
-                                        );
-                                        CREATE VIRTUAL TABLE mytable USING FTS5(content, service_name, login);";
-
-                    command.ExecuteNonQuery();
-                }
-
-                connection.Close();
-            }
-        }
-
-        public void UpdateVirtualTableData()
-        {
-            using (SQLiteConnection connection = CreateConnection())
-            {
-                connection.Open();
-
-                using (SQLiteCommand command = new SQLiteCommand())
-                {
-                    command.Connection = connection;
-                    command.CommandText = @"
-                                        INSERT INTO mytable (content, service_name, login)
-                                        SELECT account.id, service.service_name, account.login
-                                        FROM account
-                                        JOIN service ON account.service_id = service.id;";
+                                        );";
 
                     command.ExecuteNonQuery();
                 }
