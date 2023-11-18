@@ -58,7 +58,6 @@ namespace password_manager
             return weakness;
         }
 
-        //TODO: change key to salt, generate salt for each user locally
         public static string EncryptPassword(string key, string password)
         {
             byte[] iv = new byte[16];

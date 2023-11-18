@@ -10,6 +10,41 @@ namespace password_manager.Repositrories
     {
         SQLiteHelper dbHelper = new SQLiteHelper();
 
+        public Account GetAccountById(long id)
+        {
+            Account account = null;
+            using (SQLiteConnection connection = dbHelper.CreateConnection())
+            {
+                connection.Open();
+
+                using (SQLiteCommand command = new SQLiteCommand("SELECT * FROM account JOIN service ON account.service_id = service.id WHERE account.id = @id", connection))
+                {
+                    command.Parameters.AddWithValue("@id", id);
+
+                    using (SQLiteDataReader reader = command.ExecuteReader())
+                    {
+                        if (reader.HasRows)
+                        {
+                            while (reader.Read())
+                            {
+                                string serviceName = (string)reader["service_name"];
+                                string login = (string)reader["login"];
+                                byte[] passHash = (byte[])reader["password_hash"];
+                                account = new Account(id, serviceName, login, passHash);
+                            }
+                        }
+                        else
+                        {
+                            MessageBox.Show("No matching records found.");
+                        }
+                    }
+                }
+
+                connection.Close();
+            }
+
+            return account;
+        }
 
         public void AddAccount(string login, long serviceId, string password)
         {
@@ -124,6 +159,25 @@ namespace password_manager.Repositrories
             }
 
             return services;
+        }
+
+        public void DeleteAccount(long id)
+        {
+            using (SQLiteConnection connection = dbHelper.CreateConnection())
+            {
+                connection.Open();
+
+                using (SQLiteCommand command = new SQLiteCommand())
+                {
+                    command.Connection = connection;
+                    command.CommandText = "DELETE FROM account WHERE id = @id";
+                    command.Parameters.AddWithValue("@id", id);
+
+                    command.ExecuteNonQuery();
+                }
+
+                connection.Close();
+            }
         }
     }
 }

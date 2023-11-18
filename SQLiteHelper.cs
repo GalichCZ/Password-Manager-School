@@ -22,6 +22,7 @@ namespace password_manager
             return new SQLiteConnection(connectionString);
         }
 
+        // Create needed tables if they don't exist
         public void CreateTables()
         {
             using (SQLiteConnection connection = CreateConnection())

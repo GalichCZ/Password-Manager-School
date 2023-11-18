@@ -4,6 +4,7 @@ using password_manager.Repositrories;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -95,6 +96,13 @@ namespace password_manager
             Service service = (Service)serviceNameComboBox.SelectedItem;
             string login = loginTextBox.Text;
             string password = passwordHashTextBox.Text;
+
+            if (service == null || String.IsNullOrEmpty(login) || String.IsNullOrEmpty(password))
+            {
+                MessageBox.Show("Complete all data !");
+                return;
+            }
+
             string passwordHash = Utils.EncryptPassword(key, password);
 
             accountRepository.AddAccount(login, service.Id, passwordHash);
@@ -108,7 +116,23 @@ namespace password_manager
         {
             string serviceName = serviceNameTextBox.Text;
 
-            bool isServiceExists = serviceRepository.CheckServiceExists(serviceName);
+            if(String.IsNullOrEmpty(serviceName))
+            {
+                MessageBox.Show("Complete all data !");
+                return;
+            }
+
+            bool isServiceExists = true;
+
+            try
+            {
+                isServiceExists = serviceRepository.CheckServiceExists(serviceName);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+                return;
+            }
 
             if (isServiceExists)
             {
@@ -116,24 +140,44 @@ namespace password_manager
                 return;
             }
 
-            serviceRepository.AddService(serviceName);
-
-            MessageBox.Show("Service added successfully!");
-            LoadServices();
+            try
+            {
+                serviceRepository.AddService(serviceName);
+                MessageBox.Show("Service added successfully!");
+                LoadServices();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
         }
 
         private void LoadAccounts()
         {
-            List<Account> services = accountRepository.GetAllServices();
-            
-            serviceListView.ItemsSource = services;
+            try
+            {
+                List<Account> services = accountRepository.GetAllServices();
+
+                accountListView.ItemsSource = services;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
         }
 
         private void LoadServices()
         {
-            List<Service> services = serviceRepository.GetServices();
+            try
+            {
+                List<Service> services = serviceRepository.GetServices();
 
-            serviceNameComboBox.ItemsSource = services;
+                serviceNameComboBox.ItemsSource = services;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
         }
 
         private void PasswordTextBlock_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -147,16 +191,45 @@ namespace password_manager
             }
         }
 
-        private void IDTextBlock_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        private void ListView_SelectionChanged(object sender, RoutedEventArgs e)
         {
-            Account selectedService = (Account)serviceListView.SelectedItem;
-            if (selectedService != null)
+            Button? button = sender as Button;
+            long id = (long)button.Tag;
+
+            Account selectedAccount = accountRepository.GetAccountById(id);
+
+            if (selectedAccount != null)
             {
                 UpdateModal modalWindow = new UpdateModal();
 
-                modalWindow.DataContext = selectedService;
+                modalWindow.originalInput = selectedAccount.PasswordHashString;
+
+                modalWindow.DataContext = selectedAccount;
+
+                List<Service> services = null;
+
+                try
+                {
+                    services = serviceRepository.GetServices();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message);
+                    return;
+                }
+
+                Service foundService = services.FirstOrDefault(service => service.ServiceName == selectedAccount.ServiceName);
+
+                modalWindow.serviceNameComboBox.ItemsSource = services;
+
+                modalWindow.serviceNameComboBox.SelectedValue = foundService;
 
                 modalWindow.ShowDialog();
+
+                modalWindow.Unloaded += (s, ev) =>
+                {
+                    LoadAccounts();
+                };
             }
         }
 
@@ -169,6 +242,7 @@ namespace password_manager
 
         private void Timer_Tick(object sender, EventArgs e)
         {
+            // This is the same as useDebounce hook in React, it will trigger the action after 100ms, when the user stops typing
             timer.Stop();
             string searchTerm = searchTextBox.Text;
             TriggerAction(searchTerm);
@@ -176,11 +250,18 @@ namespace password_manager
 
         private void TriggerAction(string searchTerm)
         {
-            if(searchTerm.Length > 0)
+            if (searchTerm.Length > 0)
             {
-                List<Account> services = accountRepository.SearchThrough(searchTerm);
+                try
+                {
+                    List<Account> services = accountRepository.SearchThrough(searchTerm);
 
-                serviceListView.ItemsSource = services;
+                    accountListView.ItemsSource = services;
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message);
+                }
             }
             else
             {
@@ -191,12 +272,30 @@ namespace password_manager
         private void Sort(string sortBy, ListSortDirection direction)
         {
             ICollectionView dataView =
-              CollectionViewSource.GetDefaultView(serviceListView.ItemsSource);
+              CollectionViewSource.GetDefaultView(accountListView.ItemsSource);
 
             dataView.SortDescriptions.Clear();
             SortDescription sd = new SortDescription(sortBy, direction);
             dataView.SortDescriptions.Add(sd);
             dataView.Refresh();
+        }
+
+        private void ListView_SelectionDelete(object sender, RoutedEventArgs e)
+        {
+            Button? button = sender as Button;
+            long id = (long)button.Tag;
+
+            try
+            {
+                accountRepository.DeleteAccount(id);
+                MessageBox.Show("Service deleted successfully!");
+            }
+            catch (Exception)
+            {
+                MessageBox.Show("Service can't be deleted!");
+            }
+
+            LoadAccounts();
         }
     }
 }
